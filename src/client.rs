@@ -227,6 +227,7 @@ impl CoAPClient {
         let peer_addr = self.peer_addr.clone();
         let (observe_sender, observe_receiver) = mpsc::channel();
         let observe_path = String::from(resource_path);
+        let path = register_packet.get_path().to_string();
 
         let observe_thread = thread::spawn(move || loop {
             match Self::receive_from_socket(&socket) {
@@ -241,12 +242,26 @@ impl CoAPClient {
                         packet.header.message_id = response.message.header.message_id;
                         packet.set_token(response.message.get_token().into());
 
+                        // Set path
+                        packet.clear_option(CoapOption::UriPath);
+                        let segs = path.split('/');
+                        for (i, s) in segs.enumerate() {
+                            if i == 0 && s.is_empty() {
+                                continue;
+                            }
+
+                            packet.add_option(CoapOption::UriPath, s.as_bytes().to_vec());
+                        }
+                        // \\ Set path
+
+                        /*
                         match Self::send_with_socket(&socket, &peer_addr, &packet) {
                             Ok(_) => (),
                             Err(e) => {
                                 warn!("reply ack failed {}", e)
                             }
                         }
+                        */
                     }
                 }
                 Err(e) => match e.kind() {
